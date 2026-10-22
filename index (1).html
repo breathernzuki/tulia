@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tulia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: one calm column. Header, tabs, then a single job per tab. Journal leads with the "why you lose" findings. */
+:root{
+  --bg:#F1F3EF; --surface:#FFFFFF; --ink:#13201B; --muted:#5B6B64; --line:#D9DFD9;
+  --accent:#0F6B58; --accent-ink:#FFFFFF; --accent-soft:#DCEBE6;
+  --gain:#1F7A3E; --loss:#C2412D; --loss-soft:#F7E6E1; --gain-soft:#E1F0E6;
+  --f-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --f-body:'Instrument Sans','Segoe UI',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1714; --surface:#16211D; --ink:#E6EEE9; --muted:#8FA39A; --line:#26362F;
+  --accent:#4DC2A5; --accent-ink:#06130F; --accent-soft:#1B3A32;
+  --gain:#5CCB86; --loss:#F0806C; --loss-soft:#3A1F1A; --gain-soft:#173324; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0F1714; --surface:#16211D; --ink:#E6EEE9; --muted:#8FA39A; --line:#26362F;
+  --accent:#4DC2A5; --accent-ink:#06130F; --accent-soft:#1B3A32;
+  --gain:#5CCB86; --loss:#F0806C; --loss-soft:#3A1F1A; --gain-soft:#173324; color-scheme:dark;}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.55 var(--f-body);
+  padding-block:0 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1040px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;line-height:1.15}
+h2{font-size:1.5rem;letter-spacing:-.01em}
+h3{font-size:1.05rem}
+p{margin:0}
+.muted{color:var(--muted)}
+.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding-block:18px}
+.brand{font:700 1.6rem/1 var(--f-display);letter-spacing:-.02em}
+.brand small{font:400 .8rem var(--f-body);color:var(--muted);margin-left:8px;letter-spacing:0}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.8rem;background:var(--surface)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.pill.on .dot{background:var(--gain)}
+.pill.off .dot{background:var(--loss)}
+.pill.demo{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.pill.real{background:var(--loss-soft);border-color:transparent;color:var(--loss)}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.rise{background:var(--gain);color:#fff;border-color:var(--gain)}
+.btn.fall{background:var(--loss);color:#fff;border-color:var(--loss)}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:.8rem;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.field input,.field select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px;min-width:0;width:100%}
+
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;cursor:pointer;color:var(--muted);font-weight:500;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+section.panel{padding-block:24px;display:flex;flex-direction:column;gap:24px}
+
+.surface{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.row>.field{flex:1 1 140px}
+
+/* login */
+.login{max-width:640px;margin:32px auto;display:flex;flex-direction:column;gap:20px}
+.login h1{font-size:clamp(1.9rem,6vw,2.8rem);letter-spacing:-.025em}
+.msg{color:var(--loss);min-height:1.4em;font-size:.9rem}
+.notice{background:var(--accent-soft);border-radius:8px;padding:10px 14px;font-size:.9rem;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+
+/* journal */
+.stats{display:flex;flex-wrap:wrap;gap:8px 32px}
+.stat{display:flex;flex-direction:column}
+.stat b{font:500 1.6rem/1.2 var(--f-mono);font-variant-numeric:tabular-nums}
+.stat span{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.gain{color:var(--gain)} .loss{color:var(--loss)}
+.finding{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;padding:16px 0;border-top:1px solid var(--line)}
+.finding:first-child{border-top:0;padding-top:0}
+.finding p{grid-column:2;color:var(--muted)}
+.tag{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:2px 8px;align-self:start;margin-top:3px}
+.tag.warn{background:var(--loss-soft);color:var(--loss)}
+.tag.good{background:var(--gain-soft);color:var(--gain)}
+.tag.info{background:var(--accent-soft);color:var(--accent)}
+svg.chart{width:100%;height:auto;display:block}
+svg .eq{fill:none;stroke:var(--accent);stroke-width:2}
+svg .eqfill{fill:var(--accent-soft)}
+svg .zero{stroke:var(--line);stroke-width:1}
+svg .bpos{fill:var(--gain)} svg .bneg{fill:var(--loss)}
+svg text{fill:var(--muted);font:11px var(--f-mono)}
+svg .end{fill:var(--accent)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:480px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:500}
+td.r,th.r{text-align:right}
+
+/* trainer */
+.lessons{display:flex;flex-direction:column}
+.lesson{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.lesson:first-child{border-top:0}
+.lesson .t{flex:1 1 220px;min-width:0}
+.lesson .check{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:.8rem}
+.lesson.done .check{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.quiz label{display:flex;gap:10px;padding:8px 0;cursor:pointer}
+.ruin td:first-child{font-family:var(--f-mono)}
+.level{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.level i{display:block;height:100%;background:var(--accent)}
+
+/* practice */
+.price{font:500 2.4rem/1 var(--f-mono);font-variant-numeric:tabular-nums}
+.meter{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.meter.hot i{background:var(--loss)}
+.log{display:flex;flex-direction:column;font-family:var(--f-mono);font-size:.85rem}
+.log div{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--line)}
+footer{margin-top:40px;color:var(--muted);font-size:.82rem;max-width:70ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="brand">Tulia<small>calm trading, in Swahili</small></div>
+  <div class="spacer"></div>
+  <span class="pill off" id="conn"><span class="dot"></span><span id="connText">Offline</span></span>
+  <span class="pill" id="acctKind" hidden></span>
+  <div class="field" id="acctPick" hidden style="min-width:190px"><select id="acctSel" aria-label="Account"></select></div>
+  <button class="btn" id="logout" hidden>Sign out</button>
+</header>
+
+<!-- sign in -->
+<div id="loginView" class="login">
+  <h1>See why you lose, then practise until you stop.</h1>
+  <p class="muted">Tulia reads your Deriv trade history, finds the habits that cost you money, and gives you a demo-only place to fix them. It never places a trade on a real account.</p>
+  <div class="surface" style="display:flex;flex-direction:column;gap:16px">
+    <button class="btn primary" id="oauthBtn">Sign in with Deriv</button>
+    <p class="muted" style="font-size:.85rem">You log in on Deriv's own page. Tulia never sees your password.</p>
+    <hr style="border:0;border-top:1px solid var(--line);width:100%">
+    <div class="row">
+      <div class="field"><label for="tok">Or paste an API token</label><input id="tok" type="password" autocomplete="off" placeholder="Personal access token from developers.deriv.com"></div>
+      <button class="btn" id="tokBtn">Connect</button>
+    </div>
+    <div class="msg" id="loginMsg" role="alert"></div>
+  </div>
+  <button class="btn" id="sampleBtn">Look around with sample trades</button>
+</div>
+
+<!-- app -->
+<div id="appView" hidden>
+  <div class="notice" id="sampleNote" hidden>
+    <span>You are looking at made-up sample trades.</span>
+    <button class="btn" id="exitSample">Sign in to see your own</button>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" aria-selected="true" data-tab="journal">Journal</button>
+    <button role="tab" aria-selected="false" data-tab="trainer">Trainer</button>
+    <button role="tab" aria-selected="false" data-tab="practice">Practice</button>
+    <button role="tab" aria-selected="false" data-tab="settings">Settings</button>
+  </nav>
+
+  <section class="panel" id="tab-journal">
+    <div class="surface">
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="surface">
+      <h2 style="margin-bottom:6px">Why you lose</h2>
+      <p class="muted" style="margin-bottom:16px" id="findSub"></p>
+      <div id="findings"></div>
+    </div>
+    <div class="grid2">
+      <div class="surface"><h3 style="margin-bottom:10px">Running profit and loss</h3><div id="eqChart"></div></div>
+      <div class="surface"><h3 style="margin-bottom:10px">Profit and loss by hour you trade</h3><div id="hourChart"></div></div>
+    </div>
+    <div class="surface">
+      <h3 style="margin-bottom:10px">Latest trades</h3>
+      <div class="scroll"><table><thead><tr><th>Closed</th><th>Market</th><th>Type</th><th class="r">Stake</th><th class="r">Result</th></tr></thead><tbody id="tradeRows"></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-trainer" hidden>
+    <div class="grid2">
+      <div class="surface">
+        <h2 style="margin-bottom:6px">Risk school</h2>
+        <p class="muted" style="margin-bottom:14px">Five short lessons. Each ends with one question. Finish one a day to keep your streak.</p>
+        <div class="row" style="align-items:center;margin-bottom:8px">
+          <b class="num" id="xpText"></b><span class="muted" id="streakText"></span>
+        </div>
+        <div class="level"><i id="xpBar" style="width:0"></i></div>
+        <div class="lessons" id="lessons" style="margin-top:12px"></div>
+      </div>
+      <div class="surface" id="lessonPane">
+        <p class="muted">Pick a lesson to start.</p>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="surface">
+        <h3 style="margin-bottom:10px">Stake sizer</h3>
+        <div class="row">
+          <div class="field"><label for="calcBal">Balance</label><input id="calcBal" type="number" min="0" value="200" inputmode="decimal"></div>
+          <div class="field"><label for="calcRisk">Risk per trade, %</label><input id="calcRisk" type="number" min="0.1" max="100" step="0.1" value="1" inputmode="decimal"></div>
+        </div>
+        <p style="margin-top:14px">Stake per trade: <b class="num" id="calcStake"></b></p>
+        <p class="muted" id="calcNote" style="margin-top:4px"></p>
+      </div>
+      <div class="surface">
+        <h3 style="margin-bottom:10px">Losses in a row to lose half your balance</h3>
+        <table class="ruin"><thead><tr><th>Risk per trade</th><th class="r">Losing trades</th></tr></thead>
+        <tbody id="ruinRows"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-practice" hidden>
+    <div class="grid2">
+      <div class="surface">
+        <div class="row" style="align-items:center;justify-content:space-between">
+          <h2>Volatility 100 Index</h2><span class="pill" id="symPill">R_100</span>
+        </div>
+        <div class="price" id="price" style="margin:14px 0 4px">&mdash;</div>
+        <div id="tickChart"></div>
+      </div>
+      <div class="surface" style="display:flex;flex-direction:column;gap:14px">
+        <h3>Practise a trade</h3>
+        <p class="muted" id="practiceNote"></p>
+        <div class="row">
+          <div class="field"><label for="stake">Stake</label><input id="stake" type="number" min="0.35" step="0.01" value="1" inputmode="decimal"></div>
+          <div class="field"><label>Duration</label><input value="5 ticks" disabled></div>
+        </div>
+        <div class="row">
+          <button class="btn rise" id="buyUp" style="flex:1">Rise</button>
+          <button class="btn fall" id="buyDown" style="flex:1">Fall</button>
+        </div>
+        <div class="msg" id="tradeMsg" role="alert"></div>
+        <div>
+          <div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="muted">Session loss limit</span><b class="num" id="limitText"></b></div>
+          <div class="meter" id="meter"><i style="width:0"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="surface"><h3 style="margin-bottom:6px">This session</h3><div class="log" id="plog"><p class="muted">No practice trades yet.</p></div></div>
+  </section>
+
+  <section class="panel" id="tab-settings" hidden>
+    <div class="surface" style="display:flex;flex-direction:column;gap:16px;max-width:560px">
+      <h2>Settings</h2>
+      <div class="field"><label for="setApp">Deriv app ID</label><input id="setApp" inputmode="numeric"></div>
+      <div class="field"><label for="setEp">Public price feed (optional, used before sign in)</label><input id="setEp"></div>
+      <div class="field"><label for="setLimit">Practice session loss limit</label><input id="setLimit" type="number" min="1" step="1"></div>
+      <div class="row"><button class="btn primary" id="saveSet" style="flex:0 0 auto">Save and reconnect</button></div>
+      <p class="muted" style="font-size:.85rem">Register a Web-based app at developers.deriv.com and paste its ID above. Add this exact redirect URL to the app: <b class="mono" id="redir" style="word-break:break-all"></b></p>
+    </div>
+  </section>
+</div>
+
+<footer>Tulia is an independent app built on Deriv's public API. It is not made or endorsed by Deriv. Trading carries a high risk of losing money. Nothing here is financial advice.</footer>
+</div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const sess={get(k){try{return JSON.parse(sessionStorage.getItem(k))}catch(e){return null}},set(k,v){try{sessionStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{sessionStorage.removeItem(k)}catch(e){}}};
+
+const cfg={
+  appId:store.get('t_app',''),
+  endpoint:store.get('t_ep','wss://ws.derivws.com/websockets/v3'),
+  limit:+store.get('t_limit','20')
+};
+const state={acct:null,accounts:[],trades:[],sample:false,sessLoss:0,practice:[]};
+const money=(v,c)=>(v<0?'−':'+')+Math.abs(v).toFixed(2)+(c?' '+c:'');
+const pct=x=>Math.round(x*100)+'%';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- Deriv connection ---------- */
+let ws=null,reqId=1;
+const pending=new Map(),subs=new Map();
+
+function setConn(on){
+  const el=$('#conn');el.className='pill '+(on?'on':'off');
+  $('#connText').textContent=on?'Connected to Deriv':'Offline';
+}
+function connect(url){
+  return new Promise((res,rej)=>{
+    try{if(ws)ws.close()}catch(e){}
+    pending.clear();subs.clear();
+    try{ws=new WebSocket(url||(cfg.endpoint+'?app_id='+encodeURIComponent(cfg.appId)+'&l=EN'))}catch(e){rej(new Error('Bad endpoint in Settings'));return}
+    const sock=ws;
+    sock.onopen=()=>{setConn(true);res()};
+    sock.onerror=()=>rej(new Error('Could not reach Deriv. Check your connection and the endpoint in Settings.'));
+    sock.onclose=()=>{if(ws===sock){setConn(false);pending.forEach(p=>p.rej({message:'Connection closed'}));pending.clear()}};
+    sock.onmessage=e=>{
+      let m;try{m=JSON.parse(e.data)}catch(x){return}
+      const h=subs.get(m.req_id);
+      if(h){h(m);return}
+      const p=pending.get(m.req_id);
+      if(p){pending.delete(m.req_id);m.error?p.rej(m.error):p.res(m)}
+    };
+  });
+}
+async function ensure(){if(!ws||ws.readyState!==1){await connect();startTicks()}}
+function send(payload){
+  return new Promise((res,rej)=>{
+    if(!ws||ws.readyState!==1){rej({message:'Not connected'});return}
+    const id=reqId++;pending.set(id,{res,rej});
+    ws.send(JSON.stringify({...payload,req_id:id}));
+  });
+}
+function subscribe(payload,handler){
+  const id=reqId++;subs.set(id,handler);
+  ws.send(JSON.stringify({...payload,req_id:id}));
+  return id;
+}
+
+/* ---------- auth (Deriv OAuth 2.0 with PKCE, or a personal access token) ---------- */
+const NEW={auth:'https://auth.deriv.com/oauth2/auth',token:'https://auth.deriv.com/oauth2/token',rest:'https://api.derivws.com/trading/v1/options'};
+const redirectUri=()=>location.origin+location.pathname;
+const b64u=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const rand=()=>b64u(crypto.getRandomValues(new Uint8Array(32)));
+async function startOAuth(){
+  const verifier=rand(),st=rand();
+  const challenge=b64u(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier)));
+  sess.set('pkce',{verifier,state:st});
+  const u=new URL(NEW.auth);
+  u.searchParams.set('response_type','code');u.searchParams.set('client_id',cfg.appId);
+  u.searchParams.set('redirect_uri',redirectUri());u.searchParams.set('scope','trade account_manage');
+  u.searchParams.set('state',st);u.searchParams.set('code_challenge',challenge);u.searchParams.set('code_challenge_method','S256');
+  location.href=u.toString();
+}
+async function finishOAuth(){
+  const q=new URLSearchParams(location.search),code=q.get('code'),st=q.get('state');
+  if(!code)return null;
+  history.replaceState(null,'',location.pathname);
+  const p=sess.get('pkce');sess.del('pkce');
+  if(!p||p.state!==st)throw new Error('Sign in was interrupted. Please try again.');
+  const r=await fetch(NEW.token,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({grant_type:'authorization_code',client_id:cfg.appId,code,redirect_uri:redirectUri(),code_verifier:p.verifier})});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.access_token)throw new Error(j.error_description||('Deriv did not accept the sign in ('+r.status+').'));
+  return j.access_token;
+}
+const hdr=b=>({Authorization:'Bearer '+b,'Deriv-App-ID':cfg.appId});
+async function listAccounts(b){
+  const r=await fetch(NEW.rest+'/accounts',{headers:hdr(b)});
+  if(r.status===401||r.status===403)throw new Error('Deriv rejected this login or token. Sign in again, and check its scopes.');
+  if(!r.ok)throw new Error('Could not list your Deriv accounts ('+r.status+').');
+  const j=await r.json().catch(()=>({}));
+  const arr=Array.isArray(j)?j:(j.data&&(j.data.accounts||j.data))||j.accounts||[];
+  return (Array.isArray(arr)?arr:[]).map(a=>{
+    const id=a.account_id||a.loginid||a.id;
+    return {loginid:id,cur:a.currency,balance:a.balance,virtual:/^(demo|virtual)$/i.test(a.account_type||'')||a.is_virtual===1||a.is_virtual===true||/^(VR|DOT)/i.test(id||'')};
+  }).filter(a=>a.loginid);
+}
+async function otpUrl(b,id){
+  const r=await fetch(NEW.rest+'/accounts/'+encodeURIComponent(id)+'/otp',{method:'POST',headers:hdr(b)});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!(j.data&&j.data.url))throw new Error('Could not open a trading connection ('+r.status+').');
+  return j.data.url;
+}
+function updateBadge(){
+  const a=state.acct,k=$('#acctKind');if(!a)return;
+  k.hidden=false;k.className='pill '+(a.virtual?'demo':'real');
+  k.textContent=(a.virtual?'Demo ':'Real ')+a.loginid+(a.balance!=null?' · '+(+a.balance).toFixed(2)+' '+(a.currency||''):'');
+}
+function renderAccounts(){
+  const sel=$('#acctSel');
+  sel.innerHTML=state.accounts.map(a=>`<option value="${esc(a.loginid)}">${a.virtual?'Demo':'Real'} · ${esc(a.loginid)}${a.cur?' · '+esc(a.cur):''}</option>`).join('');
+  if(state.acct)sel.value=state.acct.loginid;
+  $('#acctPick').hidden=state.accounts.length<2;
+}
+async function login(bearer,loginid){
+  $('#loginMsg').textContent='';
+  try{
+    const list=await listAccounts(bearer);
+    if(!list.length)throw new Error('No Deriv trading accounts were found for this login.');
+    const pick=list.find(a=>a.loginid===loginid)||list.find(a=>a.virtual)||list[0];
+    const url=await otpUrl(bearer,pick.loginid);
+    ticks=[];
+    await connect(url);startTicks();
+    state.bearer=bearer;state.accounts=list;state.sample=false;state.sessLoss=0;
+    state.acct={loginid:pick.loginid,currency:pick.cur,balance:pick.balance,virtual:pick.virtual};
+    sess.set('bearer',bearer);sess.set('lastacct',pick.loginid);
+    renderAccounts();showApp();updateBadge();
+    send({balance:1}).then(r=>{state.acct.balance=r.balance.balance;state.acct.currency=r.balance.currency||pick.cur;updateBadge();updatePractice()}).catch(()=>{});
+    await loadJournal();updatePractice();
+  }catch(e){
+    sess.del('bearer');
+    $('#loginMsg').textContent=e.message||'Sign in failed';
+    if(!state.acct)showLogin();
+  }
+}
+function showLogin(){$('#loginView').hidden=false;$('#appView').hidden=true;$('#logout').hidden=true;$('#acctKind').hidden=true;$('#acctPick').hidden=true}
+function showApp(){$('#loginView').hidden=true;$('#appView').hidden=false;$('#logout').hidden=false;$('#sampleNote').hidden=!state.sample}
+function logout(){
+  sess.del('bearer');sess.del('lastacct');
+  try{if(ws)ws.close()}catch(e){}
+  ws=null;setConn(false);
+  state.acct=null;state.accounts=[];state.bearer=null;state.trades=[];state.sample=false;
+  showLogin();
+}
+
+/* ---------- journal ---------- */
+async function loadJournal(){
+  $('#findSub').textContent='Reading your trade history…';
+  try{
+    const r=await send({profit_table:1,description:1,limit:500,sort:'DESC'});
+    const tx=(r.profit_table&&r.profit_table.transactions)||[];
+    state.trades=tx.map(t=>{
+      const p=parseShort(t.shortcode||'');
+      return {id:t.contract_id,t:t.sell_time,buyT:t.purchase_time,stake:+t.buy_price,pnl:+t.sell_price-+t.buy_price,sym:p.sym,type:p.type};
+    }).sort((a,b)=>a.t-b.t);
+  }catch(e){
+    state.trades=[];
+    $('#findSub').textContent=(e.code==='PermissionDenied')?'This token cannot read trade history. Create one with the Read scope.':('Could not load trades: '+(e.message||'unknown error'));
+  }
+  renderJournal();
+}
+function parseShort(s){
+  const p=s.split('_');const type=p[0]||'';const sym=[];
+  for(let i=1;i<p.length;i++){if(/^\d{9,}$/.test(p[i])||/^\d+\.\d+$/.test(p[i]))break;sym.push(p[i])}
+  return {type,sym:sym.join('_')||'unknown'};
+}
+const hhmm=t=>new Date(t*1000).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+
+function analyse(tr){
+  const n=tr.length,out=[];
+  const W=t=>t.pnl>0,wr=a=>a.length?a.filter(W).length/a.length:0;
+  if(n<10)return [{tone:'info',title:'Not enough trades yet',body:'Tulia needs at least 10 closed trades to look for patterns. You have '+n+'.'}];
+  const base=wr(tr);
+  // wins in a row
+  const a2=[];for(let i=2;i<n;i++)if(W(tr[i-1])&&W(tr[i-2]))a2.push(tr[i]);
+  if(a2.length>=8&&wr(a2)<base-0.08)out.push({tone:'warn',title:'Winning streaks make you sloppy',body:`After two wins in a row you win ${pct(wr(a2))} of the next trades, against ${pct(base)} overall (${a2.length} trades). Try a rule: after two wins, stop or halve your stake.`});
+  // stakes after loss
+  const sl=[],sw=[];for(let i=1;i<n;i++)(W(tr[i-1])?sw:sl).push(tr[i].stake);
+  const av=a=>a.reduce((x,y)=>x+y,0)/(a.length||1);
+  if(sl.length>=8&&sw.length>=8&&av(sl)>av(sw)*1.3)out.push({tone:'warn',title:'You raise your stake after a loss',body:`Your average stake after a loss is ${av(sl).toFixed(2)}, against ${av(sw).toFixed(2)} after a win. Bigger stakes while you are trying to win it back turn small dips into large ones.`});
+  // revenge
+  const rev=[],calm=[];for(let i=1;i<n;i++){if(!W(tr[i-1])&&tr[i].buyT-tr[i-1].t<120)rev.push(tr[i]);else calm.push(tr[i])}
+  if(rev.length>=8&&wr(rev)<wr(calm)-0.08)out.push({tone:'warn',title:'Quick re-entries after a loss cost you',body:`When you open a trade within two minutes of a loss you win ${pct(wr(rev))}. Otherwise you win ${pct(wr(calm))} (${rev.length} quick trades). A two-minute pause after every loss would have helped.`});
+  // time of day
+  const bk={Night:[],Morning:[],Afternoon:[],Evening:[]};
+  const bucket=h=>h>=22||h<5?'Night':h<12?'Morning':h<18?'Afternoon':'Evening';
+  const rng={Night:'22:00–05:00',Morning:'05:00–12:00',Afternoon:'12:00–18:00',Evening:'18:00–22:00'};
+  tr.forEach(t=>bk[bucket(new Date(t.t*1000).getHours())].push(t));
+  const net=a=>a.reduce((x,t)=>x+t.pnl,0);
+  const worst=Object.entries(bk).filter(([,a])=>a.length>=8).sort((x,y)=>net(x[1])-net(y[1]))[0];
+  if(worst&&net(worst[1])<0)out.push({tone:'warn',title:`Your ${worst[0].toLowerCase()} trades lose money`,body:`Between ${rng[worst[0]]} your local time you made ${worst[1].length} trades, won ${pct(wr(worst[1]))}, and netted ${money(net(worst[1]))}. Consider not trading in that window.`});
+  // symbols
+  const by={};tr.forEach(t=>(by[t.sym]=by[t.sym]||[]).push(t));
+  const sy=Object.entries(by).filter(([,a])=>a.length>=8).sort((x,y)=>net(x[1])-net(y[1]));
+  if(sy.length>1&&net(sy[0][1])<0)out.push({tone:'warn',title:`${sy[0][0]} is your weakest market`,body:`${sy[0][1].length} trades, ${pct(wr(sy[0][1]))} won, net ${money(net(sy[0][1]))}. Your best is ${sy[sy.length-1][0]} at ${money(net(sy[sy.length-1][1]))}.`});
+  if(!out.length)out.push({tone:'good',title:'No strong losing pattern found',body:`Across ${n} trades you win ${pct(base)}. Keep logging. Patterns need a few hundred trades to show up clearly.`});
+  return out;
+}
+
+function lineChart(el,vals){
+  const W=520,H=190,pl=8,pr=44,pt=10,pb=10;
+  if(vals.length<2){el.innerHTML='<p class="muted">Not enough data.</p>';return}
+  const lo=Math.min(0,...vals),hi=Math.max(0,...vals),span=(hi-lo)||1;
+  const x=i=>pl+(W-pl-pr)*i/(vals.length-1),y=v=>pt+(H-pt-pb)*(1-(v-lo)/span);
+  const pts=vals.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1));
+  const last=vals[vals.length-1];
+  el.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Running profit and loss, ending at ${last.toFixed(2)}">
+    <path class="eqfill" d="M${x(0)},${y(0)} L${pts.join(' L')} L${x(vals.length-1)},${y(0)}Z" opacity=".6"/>
+    <line class="zero" x1="${pl}" x2="${W-pr}" y1="${y(0)}" y2="${y(0)}"/>
+    <polyline class="eq" points="${pts.join(' ')}"/>
+    <circle class="end" cx="${x(vals.length-1)}" cy="${y(last)}" r="4"/>
+    <text x="${W-pr+6}" y="${Math.min(H-4,Math.max(12,y(last)+4))}">${last.toFixed(0)}</text></svg>`;
+}
+function hourChart(el,tr){
+  const agg=Array(24).fill(0);tr.forEach(t=>agg[new Date(t.t*1000).getHours()]+=t.pnl);
+  const W=520,H=190,pb=20,pt=8,m=Math.max(1,...agg.map(Math.abs)),mid=(H-pb-pt)/2+pt,bw=(W-16)/24;
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Profit and loss by hour of day"><line class="zero" x1="8" x2="${W-8}" y1="${mid}" y2="${mid}"/>`;
+  agg.forEach((v,h)=>{const bh=Math.abs(v)/m*(mid-pt-2);const bx=8+h*bw+2;
+    s+=`<rect class="${v>=0?'bpos':'bneg'}" x="${bx}" width="${bw-4}" y="${v>=0?mid-bh:mid}" height="${Math.max(bh,v?1:0)}" rx="2"/>`});
+  [0,6,12,18,23].forEach(h=>s+=`<text x="${8+h*bw+bw/2}" y="${H-4}" text-anchor="middle">${String(h).padStart(2,'0')}</text>`);
+  el.innerHTML=s+'</svg>';
+}
+function renderJournal(){
+  const tr=state.trades,cur=state.acct?state.acct.currency:'USD';
+  const net=tr.reduce((x,t)=>x+t.pnl,0),w=tr.filter(t=>t.pnl>0).length;
+  $('#stats').innerHTML=`
+    <div class="stat"><b class="${net>=0?'gain':'loss'}">${money(net)}</b><span>Net ${state.sample?'':esc(cur)}</span></div>
+    <div class="stat"><b>${tr.length?pct(w/tr.length):'—'}</b><span>Win rate</span></div>
+    <div class="stat"><b>${tr.length}</b><span>Closed trades</span></div>`;
+  const f=analyse(tr);
+  $('#findSub').textContent=tr.length>=10?`Based on your last ${tr.length} closed trades, in your local time.`:'';
+  $('#findings').innerHTML=f.map(x=>`<div class="finding"><span class="tag ${x.tone}">${x.tone==='warn'?'Costing you':x.tone==='good'?'Good':'Note'}</span><h3>${esc(x.title)}</h3><p>${esc(x.body)}</p></div>`).join('');
+  let run=0;lineChart($('#eqChart'),tr.map(t=>run+=t.pnl));
+  hourChart($('#hourChart'),tr);
+  $('#tradeRows').innerHTML=tr.slice(-15).reverse().map(t=>`<tr><td>${hhmm(t.t)}</td><td>${esc(t.sym)}</td><td>${esc(t.type)}</td><td class="r num">${t.stake.toFixed(2)}</td><td class="r num ${t.pnl>=0?'gain':'loss'}">${money(t.pnl)}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">No closed trades yet.</td></tr>';
+}
+function makeSample(){
+  let s=7;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+  const out=[];let t=Date.now()/1000-86400*28,lastLoss=false,w1=false,w2=false;
+  for(let i=0;i<170;i++){
+    t+=lastLoss?40+r()*70:1500+r()*30000;
+    const h=new Date(t*1000).getHours();
+    let p=.54;if(h>=22||h<5)p=.36;if(lastLoss)p-=.08;if(w1&&w2)p-=.1;
+    const stake=lastLoss?+(5*(1.7+r())).toFixed(2):5;
+    const win=r()<p,dur=20+r()*40;
+    const pnl=win?+(stake*.85).toFixed(2):-stake;
+    out.push({id:i,buyT:Math.floor(t),t:Math.floor(t+dur),stake,pnl,sym:r()<.6?'R_100':(r()<.5?'R_50':'1HZ100V'),type:r()<.5?'CALL':'PUT'});
+    t+=dur;lastLoss=!win;w2=w1;w1=win;
+  }
+  return out;
+}
+
+/* ---------- trainer ---------- */
+const LESSONS=[
+ {t:'Size by what you can lose',b:'On Deriv options your stake is the most you can lose on a trade. Pick it before you click, as a small percent of your balance. One percent is a common ceiling while you learn. The stake sizer below does the sum for you.',q:'Your balance is 300 and you risk 2% per trade. What is the stake?',o:['2','6','20'],a:1},
+ {t:'Losing streaks are normal',b:'Even a strategy that wins 55% of the time will string together five or six losses now and then. The only question is whether your stake size lets you survive it. Check the table on this page for how fast different risk levels drain a balance.',q:'At 10% risk per trade, roughly how many losses in a row halve your balance?',o:['About 7','About 20','About 50'],a:0},
+ {t:'Never chase a loss',b:'The urge to win it back is strongest right after a loss. Raising the stake or reopening within seconds is how a bad ten minutes becomes a bad month. Put a fixed pause after each loss, and stop for the day at a limit you set before you start.',q:'After a loss you feel sure the next trade will win. What is the best move?',o:['Double the stake to recover','Take your pause, then trade your normal stake','Trade at once before the feeling fades'],a:1},
+ {t:'Set a daily loss limit',b:'Decide before trading how much you will lose today, then stop when you reach it. Tulia\'s Practice tab enforces this for you on the demo account. Real discipline is the same habit without the safety net.',q:'When should you decide your daily loss limit?',o:['After the first loss','Before you place the first trade','When you feel calm again'],a:1},
+ {t:'Practise on demo first',b:'A demo account uses the same markets and the same rules with virtual money. Run your plan there until it works over at least 100 trades, then review the journal for patterns before risking real money.',q:'How many demo trades give a rough read on a plan?',o:['5','20','100 or more'],a:2}
+];
+function prog(){try{return JSON.parse(store.get('t_prog','{}'))}catch(e){return {}}}
+function saveProg(p){store.set('t_prog',JSON.stringify(p))}
+function dayNum(d){return Math.floor((d.getTime()-d.getTimezoneOffset()*60000)/86400000)}
+function renderTrainer(){
+  const p=prog(),done=p.done||[],xp=done.length*10;
+  $('#xpText').textContent='Level '+(1+Math.floor(done.length/2))+' · '+xp+' XP';
+  $('#streakText').textContent=(p.streak||0)+' day streak';
+  $('#xpBar').style.width=Math.round(done.length/LESSONS.length*100)+'%';
+  $('#lessons').innerHTML=LESSONS.map((l,i)=>`<div class="lesson ${done.includes(i)?'done':''}"><span class="check">${done.includes(i)?'✓':''}</span><span class="t">${esc(l.t)}</span><button class="btn" data-l="${i}">${done.includes(i)?'Review':'Start'}</button></div>`).join('');
+  $$('#lessons [data-l]').forEach(b=>b.onclick=()=>openLesson(+b.dataset.l));
+}
+function openLesson(i){
+  const l=LESSONS[i];
+  $('#lessonPane').innerHTML=`<h3 style="margin-bottom:8px">${esc(l.t)}</h3><p style="margin-bottom:16px">${esc(l.b)}</p>
+  <div class="quiz"><b>${esc(l.q)}</b>${l.o.map((o,j)=>`<label><input type="radio" name="q" value="${j}"> ${esc(o)}</label>`).join('')}
+  <button class="btn primary" id="qBtn" style="margin-top:8px">Check answer</button><p id="qRes" style="margin-top:10px"></p></div>`;
+  $('#qBtn').onclick=()=>{
+    const v=$('input[name=q]:checked');if(!v){$('#qRes').textContent='Pick an answer first.';return}
+    if(+v.value===l.a){
+      const p=prog();p.done=p.done||[];
+      if(!p.done.includes(i))p.done.push(i);
+      const today=dayNum(new Date());
+      if(p.last!==today){p.streak=(p.last===today-1)?(p.streak||0)+1:1;p.last=today}
+      saveProg(p);$('#qRes').innerHTML='<span class="gain">Correct.</span> Lesson saved.';renderTrainer();
+    }else $('#qRes').innerHTML='<span class="loss">Not quite.</span> Read the lesson again and try once more.';
+  };
+}
+function calc(){
+  const b=+$('#calcBal').value||0,r=+$('#calcRisk').value||0,s=b*r/100;
+  $('#calcStake').textContent=s.toFixed(2);
+  const n=r>0&&r<100?Math.ceil(Math.log(.5)/Math.log(1-r/100)):0;
+  $('#calcNote').textContent=r>5?'That is high. Most beginners stay at 1 to 2 percent.':(n?`${n} losses in a row would halve this balance.`:'');
+}
+function renderRuin(){
+  $('#ruinRows').innerHTML=[1,2,5,10,20].map(r=>`<tr><td>${r}%</td><td class="r num">${Math.ceil(Math.log(.5)/Math.log(1-r/100))}</td></tr>`).join('');
+}
+
+/* ---------- practice (demo accounts only) ---------- */
+let ticks=[],tickSub=null;
+function startTicks(){
+  if(!ws||ws.readyState!==1)return;
+  tickSub=subscribe({ticks:'R_100',subscribe:1},m=>{
+    if(m.tick){ticks.push(m.tick.quote);if(ticks.length>60)ticks.shift();$('#price').textContent=m.tick.quote.toFixed(m.tick.pip_size||2);drawTicks()}
+  });
+}
+function drawTicks(){
+  const el=$('#tickChart');if(ticks.length<2)return;
+  const W=520,H=150,lo=Math.min(...ticks),hi=Math.max(...ticks),sp=(hi-lo)||1;
+  const pts=ticks.map((v,i)=>(8+(W-16)*i/(ticks.length-1)).toFixed(1)+','+(10+(H-20)*(1-(v-lo)/sp)).toFixed(1));
+  el.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Last ${ticks.length} ticks"><polyline class="eq" points="${pts.join(' ')}"/></svg>`;
+}
+function updatePractice(){
+  const demo=state.acct&&state.acct.virtual;
+  $('#limitText').textContent=state.sessLoss.toFixed(2)+' / '+cfg.limit.toFixed(2);
+  const m=$('#meter');m.classList.toggle('hot',state.sessLoss>=cfg.limit*.8);
+  $('i',m).style.width=Math.min(100,state.sessLoss/cfg.limit*100)+'%';
+  const hit=state.sessLoss>=cfg.limit;
+  $('#practiceNote').textContent=!state.acct?'Sign in with a demo account to practise. Live prices run without one.':!demo?'Practice trades are blocked on real accounts. Switch to your demo account in the header.':hit?'You reached your session loss limit. Stop here, check the journal, and come back tomorrow.':'Virtual money only. Five-tick rise or fall contracts.';
+  $('#buyUp').disabled=$('#buyDown').disabled=!demo||hit;
+}
+async function buy(dir){
+  $('#tradeMsg').textContent='';
+  const a=state.acct;if(!a||!a.virtual)return;
+  const stake=+$('#stake').value;
+  if(!(stake>=0.35)){$('#tradeMsg').textContent='Minimum stake is 0.35.';return}
+  if(state.sessLoss+stake>cfg.limit){$('#tradeMsg').textContent='This stake could take you past your loss limit.';return}
+  $('#buyUp').disabled=$('#buyDown').disabled=true;
+  try{
+    const p=await send({proposal:1,amount:stake,basis:'stake',contract_type:dir,currency:a.currency,duration:5,duration_unit:'t',symbol:'R_100'});
+    const b=await send({buy:p.proposal.id,price:p.proposal.ask_price});
+    const cid=b.buy.contract_id;
+    const sid=subscribe({proposal_open_contract:1,contract_id:cid,subscribe:1},m=>{
+      const c=m.proposal_open_contract;
+      if(m.error){$('#tradeMsg').textContent=m.error.message;subs.delete(sid);updatePractice();return}
+      if(c&&c.is_sold){
+        subs.delete(sid);
+        if(m.subscription)send({forget:m.subscription.id}).catch(()=>{});
+        const pnl=+c.profit;if(pnl<0)state.sessLoss+=-pnl;
+        state.practice.unshift({dir,stake,pnl});
+        renderPLog();updatePractice();
+        send({balance:1}).then(r=>{a.balance=r.balance.balance;updateBadge()}).catch(()=>{});
+      }
+    });
+  }catch(e){$('#tradeMsg').textContent=e.message||'Trade failed';updatePractice()}
+}
+function renderPLog(){
+  $('#plog').innerHTML=state.practice.map(t=>`<div><span>${t.dir==='CALL'?'Rise':'Fall'} · stake ${t.stake.toFixed(2)}</span><span class="${t.pnl>=0?'gain':'loss'}">${money(t.pnl)}</span></div>`).join('')||'<p class="muted">No practice trades yet.</p>';
+}
+
+/* ---------- wiring ---------- */
+function tab(name){
+  $$('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===name));
+  $$('section.panel').forEach(s=>s.hidden=s.id!=='tab-'+name);
+}
+$$('nav.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+$('#oauthBtn').onclick=()=>startOAuth().catch(e=>{$('#loginMsg').textContent=e.message});
+$('#tokBtn').onclick=()=>{const t=$('#tok').value.trim();if(!t){$('#loginMsg').textContent='Paste a token first.';return}login(t).then(()=>{$('#tok').value=''})};
+$('#tok').addEventListener('keydown',e=>{if(e.key==='Enter')$('#tokBtn').click()});
+$('#sampleBtn').onclick=()=>{state.sample=true;state.acct=null;state.trades=makeSample();showApp();$('#logout').hidden=true;renderJournal();updatePractice()};
+$('#exitSample').onclick=()=>{state.sample=false;state.trades=[];showLogin()};
+$('#logout').onclick=logout;
+$('#acctSel').onchange=e=>login(state.bearer,e.target.value);
+$('#buyUp').onclick=()=>buy('CALL');
+$('#buyDown').onclick=()=>buy('PUT');
+$('#calcBal').oninput=$('#calcRisk').oninput=calc;
+$('#redir').textContent=redirectUri();$('#setApp').value=cfg.appId;$('#setEp').value=cfg.endpoint;$('#setLimit').value=cfg.limit;
+$('#saveSet').onclick=()=>{
+  cfg.appId=$('#setApp').value.trim()||'1089';cfg.endpoint=$('#setEp').value.trim();cfg.limit=+$('#setLimit').value||20;
+  store.set('t_app',cfg.appId);store.set('t_ep',cfg.endpoint);store.set('t_limit',String(cfg.limit));
+  if(state.bearer)login(state.bearer,state.acct&&state.acct.loginid);else{try{if(ws)ws.close()}catch(e){}ws=null;ensure().catch(()=>{})}
+  updatePractice();
+};
+
+(async function init(){
+  renderTrainer();renderRuin();calc();updatePractice();
+  let bearer=null;
+  try{bearer=await finishOAuth()}catch(e){$('#loginMsg').textContent=e.message}
+  bearer=bearer||sess.get('bearer');
+  if(bearer){login(bearer,sess.get('lastacct'))}
+  else{ensure().catch(()=>{})}
+})();
+</script>
+</body>
+</html>
